@@ -10,10 +10,10 @@ const createProduct = async (name, description, price, categoryId) => {
 };
 
 const findProductById = async (id) => {
-    // This query also needs to be updated to join the tables
-    const res = await query(`
+    // This query fetches the main product details
+    const productQuery = await query(`
         SELECT
-            p.id, p.name, p.price, p.image, p.color, p.stock, p.badge,
+            p.*,
             c.category_name AS category,
             b.brand_name AS brand
         FROM products AS p
@@ -21,7 +21,24 @@ const findProductById = async (id) => {
         JOIN brands AS b ON p.brand_id = b.brand_id
         WHERE p.id = $1
     `, [id]);
-    return res.rows[0];
+
+    const product = productQuery.rows[0];
+
+    if (!product) {
+        return null;
+    }
+
+    // This query fetches the specifications for that product
+    const specsQuery = await query(
+        'SELECT spec_id, title, key, value FROM specifications WHERE product_id = $1 ORDER BY title',
+        [id]
+    );
+
+    // Return both the product and its specifications
+    return {
+        product: product,
+        specifications: specsQuery.rows,
+    };
 };
 
 const findAllProducts = async () => {
