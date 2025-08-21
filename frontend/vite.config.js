@@ -8,6 +8,7 @@ export default defineConfig({
     port: 5015,
     proxy: {
       '/api': 'http://localhost:5014',
+      '/images': 'http://localhost:5014',
     },
   },
 })
