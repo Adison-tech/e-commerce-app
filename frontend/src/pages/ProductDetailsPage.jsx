@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast'; // For notifications
+import { FaHeart } from 'react-icons/fa'; // Import the heart icon
 
 // A separate component for the Quantity Selector
 const QuantitySelector = ({ quantity, onQuantityChange }) => (
@@ -64,11 +65,45 @@ const ProductDetailsPage = () => {
         fetchProduct();
     }, [id]);
 
-    const handleAddToCart = () => {
-        // Here you would add the product to a global state or cart context
-        // For now, we'll just show a notification
-        toast.success(`${quantity} x ${product.name} added to cart!`);
+    const handleAddToCart = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            toast.error('Please log in to add items to your cart.');
+            return;
+        }
+
+        try {
+            await axios.post('/api/cart', {
+                productId: product.id,
+                quantity: quantity
+            }, {
+                headers: { 'x-auth-token': token }
+            });
+            toast.success(`${quantity} x ${product.name} added to cart!`);
+        } catch (err) {
+            toast.error('Failed to add item to cart. Please try again.');
+        }
     };
+
+    const handleAddToWishlist = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            toast.error('Please log in to add items to your wishlist.');
+            return;
+        }
+    
+        try {
+            await axios.post('/api/wishlist', {
+                productId: product.id
+            }, {
+                headers: { 'x-auth-token': token }
+            });
+            toast.success(`${product.name} added to wishlist!`);
+        } catch (err) {
+            toast.error('Failed to add item to wishlist. It may already be there.');
+        }
+    };
+    
 
     if (loading) {
         return (
@@ -149,6 +184,13 @@ const ProductDetailsPage = () => {
                             className="flex-1 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-transform transform hover:scale-105"
                         >
                             <span role="img" aria-label="shopping cart">🛒</span> Add to Cart
+                        </button>
+                        <button
+                            onClick={handleAddToWishlist}
+                            className="p-3 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition-transform transform hover:scale-105"
+                            aria-label="Add to wishlist"
+                        >
+                            <FaHeart />
                         </button>
                     </div>
 

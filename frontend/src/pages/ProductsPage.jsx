@@ -4,6 +4,7 @@ import { fetchProducts } from '../api/productsApi';
 import ProductCard from '../components/ProductCard';
 import PropTypes from 'prop-types';
 import Sidebar from '../components/Sidebar'; // Import the Sidebar component
+import { Toaster, toast } from 'react-hot-toast'; // Import Toaster and toast
 
 // Custom hook for filtering and sorting products
 const useFilteredProducts = (products, searchTerm, selectedCategories, minPrice, maxPrice, sortBy) => {
@@ -77,6 +78,7 @@ const ProductsPage = ({ searchTerm }) => {
                 setAllProducts(data);
             } catch (err) {
                 setError('Failed to fetch products. The server might be down.');
+                toast.error('Failed to fetch products. The server might be down.'); // Add toast for error
             } finally {
                 setLoading(false);
             }
@@ -101,6 +103,11 @@ const ProductsPage = ({ searchTerm }) => {
         );
     }, []);
 
+    // New handler to display a toast notification when a product is added to the cart
+    const handleAddToCart = useCallback((product) => {
+        toast.success(`'${product.name}' added to your cart!`);
+    }, []);
+
     const handleLoadMore = () => {
         setDisplayCount(prevCount => prevCount + productsPerPage);
     };
@@ -109,6 +116,7 @@ const ProductsPage = ({ searchTerm }) => {
         setSelectedCategories([]);
         setMinPrice('');
         setMaxPrice('');
+        toast.success('Filters cleared!'); // Add toast for clearing filters
     }, []);
 
     const areFiltersActive = useMemo(() => {
@@ -125,6 +133,7 @@ const ProductsPage = ({ searchTerm }) => {
 
     if (loading) return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-2 lg:px-2" aria-live="polite" aria-busy="true">
+            <Toaster /> {/* Add Toaster component */}
             <div className="container mx-auto flex flex-col md:flex-row gap-8">
                 {/* Product Grid Loading Skeleton */}
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -142,6 +151,7 @@ const ProductsPage = ({ searchTerm }) => {
 
     if (error) return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+            <Toaster /> {/* Add Toaster component */}
             <div className="text-red-500 text-lg mb-4 text-center">{error}</div>
             <button
                 onClick={() => window.location.reload()}
@@ -156,6 +166,7 @@ const ProductsPage = ({ searchTerm }) => {
 
     return (
         <div className="min-h-screen bg-gray-50 py-1/4">
+            <Toaster /> {/* Add Toaster component */}
             <div className="container max-w-full sm:pr-2">
                 <div className="sticky flex flex-col md:flex-row gap-2 ">
                     <Sidebar
@@ -191,7 +202,12 @@ const ProductsPage = ({ searchTerm }) => {
                         {productsToDisplay.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                                 {productsToDisplay.map((product) => (
-                                    <ProductCard key={product.id} product={product} />
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                        // Pass the new handler to ProductCard
+                                        onAddToCart={handleAddToCart}
+                                    />
                                 ))}
                             </div>
                         ) : (

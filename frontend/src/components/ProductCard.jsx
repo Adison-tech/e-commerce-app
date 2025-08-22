@@ -1,24 +1,9 @@
 // frontend/src/components/ProductCard.jsx
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
-const ProductCard = ({ product }) => {
-    const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
-
-    const handleAddToCart = () => {
-        alert(`Added "${product.name}" to the cart!`);
-    };
-
-    const handleQuickView = (e) => {
-        e.preventDefault(); // Prevent navigating to the product details page
-        setIsQuickViewOpen(true);
-    };
-
-    const handleCloseQuickView = () => {
-        setIsQuickViewOpen(false);
-    };
-
+const ProductCard = ({ product, onAddToCart }) => {
     // Ensure price is a number before calling toFixed()
     const displayPrice = parseFloat(product.price);
     const imageUrlBase = '/images/';
@@ -54,7 +39,8 @@ const ProductCard = ({ product }) => {
                         Kes {isNaN(displayPrice) ? 'N/A' : displayPrice.toFixed(2)}
                     </span>
                     <button
-                        onClick={handleAddToCart}
+                        // Use the onAddToCart prop to trigger the toast in the parent component
+                        onClick={() => onAddToCart(product)}
                         className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                     >
                         Add to Cart
@@ -75,6 +61,8 @@ ProductCard.propTypes = {
         stock: PropTypes.number,
         badge: PropTypes.string,
     }).isRequired,
+    // Add the new onAddToCart prop to propTypes
+    onAddToCart: PropTypes.func.isRequired,
 };
 
 export default React.memo(ProductCard);

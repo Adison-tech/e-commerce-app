@@ -1,45 +1,61 @@
 // frontend/src/pages/LoginPage.jsx
 import { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const LoginPage = () => {
+    const navigate = useNavigate(); // Initialize useNavigate
     const [formData, setFormData] = useState({
         email: '',
         password: '',
     });
     const [message, setMessage] = useState('');
     const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false); // New loading state
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        // Clear error for the field being changed
+        setErrors(prevErrors => ({ ...prevErrors, [e.target.name]: '' }));
+        setMessage(''); // Clear general message on input
     };
 
     const validateForm = () => {
         const newErrors = {};
-        if (!formData.email) newErrors.email = "Email is required.";
-        if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid.";
-        if (!formData.password) newErrors.password = "Password is required.";
+        if (!formData.email) {
+            newErrors.email = "Email is required.";
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = "Email is invalid.";
+        }
+        if (!formData.password) {
+            newErrors.password = "Password is required.";
+        }
+        setErrors(newErrors); // Set the errors state here
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) {
-            setMessage();
+            setMessage('Please correct the errors in the form.'); // Set a general error message
             return;
         }
+
+        setLoading(true); // Start loading
+        setMessage(''); // Clear previous messages
 
         try {
             const res = await axios.post('/api/auth/login', formData);
             localStorage.setItem('token', res.data.token);
             setMessage('Login successful! You will be redirected shortly.');
             setErrors({});
-            // Optional: Redirect to home page after a short delay
             setTimeout(() => {
-                window.location.href = '/dashboard';
+                navigate('/products'); // Use navigate for redirection
             }, 2000);
         } catch (err) {
             setMessage(err.response?.data?.message || 'Login failed. Please check your credentials.');
+        } finally {
+            setLoading(false); // End loading
         }
     };
 
@@ -112,8 +128,16 @@ const LoginPage = () => {
                         <button
                             type="submit"
                             className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-primary-blue hover:bg-dark-blue transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue"
+                            disabled={loading} // Disable button when loading
                         >
-                            Log in
+                            {loading ? (
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            ) : (
+                                'Log in'
+                            )}
                         </button>
                         {message && <p className={`mt-2 text-center text-sm ${message.includes('successful') ? 'text-green-600' : 'text-red-500'}`}>{message}</p>}
                     </form>
@@ -131,7 +155,7 @@ const LoginPage = () => {
                 {/* Image Section (Right Side) */}
                 <div className="hidden lg:block md:block w-1/2">
                     <img
-                        src="/src/assets/banner.webp"
+                        src="/src/assets/banner.webp" // Consider importing this image directly
                         alt="Login banner"
                         className="w-full h-full object-fill rounded-r-2xl"
                         onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/1000x1200/f0f4f8/808696?text=Welcome+Back"; }}
