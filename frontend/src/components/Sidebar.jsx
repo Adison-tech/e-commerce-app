@@ -15,8 +15,8 @@ const Sidebar = ({
     categoryCounts
 }) => {
     return (
-        <div className="hidden md:block md:w-1/4 lg:w-1/6 bg-white px-4 py-3 rounded-x shadow-lg max-h-screen sticky md:top-16 overflow-y-auto">
-            <h4 className="text-lg font-bold text-gray-900 mb-2">Filters</h4>
+        <div className="hidden sm:block md:block bg-white w-48 px-4 py-3 rounded-x shadow-lg min-h-screen max-h-screen sticky md:top-16">
+            <h4 className="text-xl font-bold text-gray-900 mb-2">Filters</h4>
             {areFiltersActive && (
                <button onClick={clearFilters} className="text-sm text-blue-600 hover:text-blue-800 mb-4 font-medium">
                     Clear all filters
@@ -56,9 +56,9 @@ const Sidebar = ({
                                 id={`cat-${category}`}
                                 checked={selectedCategories.includes(category)}
                                 onChange={() => handleCategoryToggle(category)}
-                                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                className="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
-                            <label htmlFor={`cat-${category}`} className="ml-2 text-gray-700 cursor-pointer">
+                            <label htmlFor={`cat-${category}`} className="ml-2 text-sm text-gray-700 cursor-pointer">
                                 {category}
                             </label>
                         </div>

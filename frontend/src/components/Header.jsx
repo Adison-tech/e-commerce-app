@@ -40,7 +40,7 @@ const Header = ({ setSearchTerm }) => {
             <div className="container max-w-full px-5 py-3 flex items-center justify-between">
                 {/* Logo */}
                 <div className="text-2xl font-bold text-gray-800">
-                    <Link to="/">E-Shop</Link>
+                    <Link to="/products">E-Shop</Link>
                 </div>
 
                 {/* Search Bar */}
