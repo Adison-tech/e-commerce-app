@@ -1,28 +1,74 @@
 // frontend/src/pages/ProductsPage.jsx
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchProducts } from '../api/productsApi';
 import ProductCard from '../components/ProductCard';
 import PropTypes from 'prop-types';
 import Sidebar from '../components/Sidebar';
 import { Toaster, toast } from 'react-hot-toast';
-import { FaChevronRight } from 'react-icons/fa';
-import axios from 'axios'; // Import axios for API calls
+import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
+import axios from 'axios';
+import Countdown from '../components/Countdown'; // Import the Countdown component
+
+// -----------------------------------------------------------
+// NEW: Sort Dropdown Component
+// -----------------------------------------------------------
+const SortDropdown = ({ sort, onSortChange }) => {
+    const sortOptions = ['Featured', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low'];
+
+    return (
+        <div className="relative group w-full md:w-48">
+            <button className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
+                <span>Sort by: {sort}</span>
+                <FaChevronDown className="ml-2 w-3 h-3 text-gray-500 group-hover:rotate-180 transition-transform duration-200" />
+            </button>
+            <div className="absolute right-0 mt-1 w-full md:w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10 opacity-0 group-hover:opacity-100 group-hover:visible transition-opacity duration-200 invisible">
+                {sortOptions.map(option => (
+                    <button
+                        key={option}
+                        onClick={() => onSortChange(option)}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                        {option}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+SortDropdown.propTypes = {
+    sort: PropTypes.string.isRequired,
+    onSortChange: PropTypes.func.isRequired,
+};
+
+// -----------------------------------------------------------
+// NEW: Standalone Sorting Logic Function
+// -----------------------------------------------------------
+const sortProducts = (products, sortType) => {
+    const sortedProducts = [...products];
+
+    switch (sortType) {
+        case 'Price: Low to High':
+            sortedProducts.sort((a, b) => (a.price - (a.price * a.discount / 100 || 0)) - (b.price - (b.price * b.discount / 100 || 0)));
+            break;
+        case 'Price: High to Low':
+            sortedProducts.sort((a, b) => (b.price - (b.price * b.discount / 100 || 0)) - (a.price - (a.price * a.discount / 100 || 0)));
+            break;
+        case 'Rating: High to Low':
+            sortedProducts.sort((a, b) => b.rating - a.rating);
+            break;
+        default:
+            break;
+    }
+
+    return sortedProducts;
+};
 
 // Component for a horizontal scrollable product section
-const ProductSection = ({ title, products, showCountdown, searchTerm, onAddToCart }) => {
-    // Filter products based on searchTerm, case-insensitive
-    const filteredProducts = useMemo(() => {
-        if (!searchTerm) {
-            return products;
-        }
-        return products.filter(product =>
-            product.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [products, searchTerm]);
-
-    // Render nothing if no products match the search
-    if (filteredProducts.length === 0) {
+const ProductSection = ({ title, products, showCountdown, onAddToCart, targetDate }) => {
+    if (products.length === 0) {
         return null;
     }
 
@@ -32,25 +78,18 @@ const ProductSection = ({ title, products, showCountdown, searchTerm, onAddToCar
                 <div className="flex items-center space-x-4">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{title}</h2>
                     {showCountdown && (
-                        // A placeholder for the countdown timer
-                        <div className="flex items-center space-x-2 text-red-500 font-bold">
-                            <span className="text-sm md:text-base">Ends in:</span>
-                            <div className="flex space-x-1 text-base">
-                                <span className="bg-red-500 text-white px-2 py-1 rounded-md">12h</span>
-                                <span className="bg-red-500 text-white px-2 py-1 rounded-md">34m</span>
-                                <span className="bg-red-500 text-white px-2 py-1 rounded-md">56s</span>
-                            </div>
-                        </div>
+                        <Countdown targetDate={targetDate} />
                     )}
                 </div>
-                <button className="flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200">
+                {/* Updated the Link to point to a general products page */}
+                <Link to="/products" className="flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200">
                     <span className="font-semibold text-sm">See all</span>
                     <FaChevronRight className="ml-1 text-sm" />
-                </button>
+                </Link>
             </div>
             <div className="relative overflow-x-auto scrollbar-hide">
                 <div className="flex space-x-4 pb-4">
-                    {filteredProducts.map(product => (
+                    {products.map(product => (
                         <div key={product.id} className="min-w-[200px] max-w-[200px] flex-shrink-0 snap-center">
                             <ProductCard product={product} onAddToCart={onAddToCart} />
                         </div>
@@ -65,24 +104,13 @@ ProductSection.propTypes = {
     title: PropTypes.string.isRequired,
     products: PropTypes.arrayOf(PropTypes.object).isRequired,
     showCountdown: PropTypes.bool,
-    searchTerm: PropTypes.string,
     onAddToCart: PropTypes.func.isRequired,
+    targetDate: PropTypes.instanceOf(Date),
 };
 
 // Component for a horizontal scrollable categories section
-const CategorySection = ({ categories, searchTerm }) => {
-    // Filter categories based on searchTerm, case-insensitive
-    const filteredCategories = useMemo(() => {
-        if (!searchTerm) {
-            return categories;
-        }
-        return categories.filter(category =>
-            category.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [categories, searchTerm]);
-
-    // Render nothing if no categories match the search
-    if (filteredCategories.length === 0) {
+const CategorySection = ({ categories }) => {
+    if (categories.length === 0) {
         return null;
     }
 
@@ -91,7 +119,7 @@ const CategorySection = ({ categories, searchTerm }) => {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Shop by Category</h2>
             <div className="relative overflow-x-auto scrollbar-hide">
                 <div className="flex space-x-4 pb-4">
-                    {filteredCategories.map(category => (
+                    {categories.map(category => (
                         <div key={category.id} className="flex-shrink-0 snap-center">
                             <div className="flex flex-col items-center w-[120px] h-[140px] bg-gray-100 rounded-lg p-3 hover:bg-gray-200 transition-colors duration-200">
                                 <img
@@ -119,35 +147,31 @@ CategorySection.propTypes = {
             image: PropTypes.string.isRequired,
         })
     ).isRequired,
-    searchTerm: PropTypes.string,
 };
 
 // Component for a single category product list
-const CategoryProductsSection = ({ categoryName, products, searchTerm, onAddToCart }) => {
-    // Filter products for the specific category and based on the search term
+const CategoryProductsSection = ({ categoryName, products, onAddToCart }) => {
     const categoryProducts = useMemo(() => {
-        const filteredByCategory = products.filter(product => product.category === categoryName);
-        if (!searchTerm) {
-            return filteredByCategory;
-        }
-        return filteredByCategory.filter(product =>
-            product.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [products, categoryName, searchTerm]);
+        return products.filter(product => product.category === categoryName);
+    }, [products, categoryName]);
 
-    // Render nothing if no products match
     if (categoryProducts.length === 0) {
         return null;
     }
+
+    const categoryPath = `/category/${encodeURIComponent(categoryName.toLowerCase().replace(/\s/g, '-'))}`;
 
     return (
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg my-6">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{categoryName}</h2>
-                <button className="flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200">
+                <Link
+                    to={categoryPath} // Dynamically generate the link based on categoryName
+                    className="flex items-center text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                >
                     <span className="font-semibold text-sm">See all</span>
                     <FaChevronRight className="ml-1 text-sm" />
-                </button>
+                </Link>
             </div>
             <div className="relative overflow-x-auto scrollbar-hide">
                 <div className="flex space-x-4 pb-4">
@@ -165,7 +189,6 @@ const CategoryProductsSection = ({ categoryName, products, searchTerm, onAddToCa
 CategoryProductsSection.propTypes = {
     categoryName: PropTypes.string.isRequired,
     products: PropTypes.arrayOf(PropTypes.object).isRequired,
-    searchTerm: PropTypes.string,
     onAddToCart: PropTypes.func.isRequired,
 };
 
@@ -177,6 +200,7 @@ const ProductsPage = () => {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('');
+    const [sort, setSort] = useState('Featured'); // NEW: State for sorting
 
     useEffect(() => {
         const getProducts = async () => {
@@ -194,24 +218,63 @@ const ProductsPage = () => {
         getProducts();
     }, []);
 
+    // Memoized filtered and sorted list of products
+    const filteredAndSortedProducts = useMemo(() => {
+        let filtered = products;
+
+        // Filter by selected categories
+        if (selectedCategories.length > 0) {
+            filtered = filtered.filter(product =>
+                selectedCategories.includes(product.category)
+            );
+        }
+
+        // Filter by price range
+        const min = parseFloat(minPrice);
+        const max = parseFloat(maxPrice);
+        if (!isNaN(min) && minPrice !== '') {
+            filtered = filtered.filter(product => product.price >= min);
+        }
+        if (!isNaN(max) && maxPrice !== '') {
+            filtered = filtered.filter(product => product.price <= max);
+        }
+
+        // Filter by search term
+        if (searchTerm) {
+            filtered = filtered.filter(product =>
+                product.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+        
+        // NEW: Apply sorting after filtering
+        return sortProducts(filtered, sort);
+    }, [products, searchTerm, selectedCategories, minPrice, maxPrice, sort]);
+
     // Memoized lists of products for each section to avoid re-calculating on every render
-    const flashSales = useMemo(() => products.slice(0, 10).map(p => ({ ...p, badge: 'Sale', initialPrice: (p.price * 1.5).toFixed(2), unitsLeft: Math.floor(Math.random() * 50) + 1 })), [products]);
-    const topSelling = useMemo(() => products.slice(10, 20).map(p => ({ ...p, badge: 'Popular', initialPrice: (p.price * 1.1).toFixed(2), unitsLeft: Math.floor(Math.random() * 100) + 1 })), [products]);
-    const discountedDeals = useMemo(() => products.slice(20, 30).map(p => ({ ...p, badge: 'Discount', initialPrice: (p.price * 1.3).toFixed(2), unitsLeft: Math.floor(Math.random() * 75) + 1 })), [products]);
-    const topPicks = useMemo(() => products.slice(30, 40).map(p => ({ ...p, initialPrice: (p.price * 1.2).toFixed(2), unitsLeft: Math.floor(Math.random() * 60) + 1 })), [products]);
-    
+    const flashSales = useMemo(() => filteredAndSortedProducts.slice(0, 10).map(p => ({ ...p, badge: 'Sale', initialPrice: (p.price * 1.5).toFixed(2), unitsLeft: Math.floor(Math.random() * 50) + 1 })), [filteredAndSortedProducts]);
+    const topSelling = useMemo(() => filteredAndSortedProducts.slice(10, 20).map(p => ({ ...p, badge: 'Popular', initialPrice: (p.price * 1.1).toFixed(2), unitsLeft: Math.floor(Math.random() * 100) + 1 })), [filteredAndSortedProducts]);
+    const discountedDeals = useMemo(() => filteredAndSortedProducts.slice(20, 30).map(p => ({ ...p, badge: 'Discount', initialPrice: (p.price * 1.3).toFixed(2), unitsLeft: Math.floor(Math.random() * 75) + 1 })), [filteredAndSortedProducts]);
+    const topPicks = useMemo(() => filteredAndSortedProducts.slice(30, 40).map(p => ({ ...p, initialPrice: (p.price * 1.2).toFixed(2), unitsLeft: Math.floor(Math.random() * 60) + 1 })), [filteredAndSortedProducts]);
+
     // Memoized product categories for the categories section
     const uniqueCategories = useMemo(() => {
         const categories = [...new Set(products.map(p => p.category))];
         return categories;
     }, [products]);
-    
+
     const categoryCounts = useMemo(() => {
         return products.reduce((acc, product) => {
             acc[product.category] = (acc[product.category] || 0) + 1;
             return acc;
         }, {});
     }, [products]);
+
+    // Set a target date for the countdown
+    const flashSaleTargetDate = useMemo(() => {
+        const now = new Date();
+        const target = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        return target;
+    }, []);
 
     // Function to handle adding a product to the cart (placeholder)
     const handleAddToCart = useCallback(async (product, quantity = 1) => {
@@ -246,11 +309,12 @@ const ProductsPage = () => {
         setSelectedCategories([]);
         setMinPrice('');
         setMaxPrice('');
+        setSearchTerm('');
     }, []);
 
     const areFiltersActive = useMemo(() => {
-        return selectedCategories.length > 0 || minPrice !== '' || maxPrice !== '';
-    }, [selectedCategories, minPrice, maxPrice]);
+        return selectedCategories.length > 0 || minPrice !== '' || maxPrice !== '' || searchTerm !== '';
+    }, [selectedCategories, minPrice, maxPrice, searchTerm]);
 
     if (loading) {
         return <div className="flex justify-center items-center h-screen text-2xl font-semibold text-gray-600">Loading products...</div>;
@@ -286,10 +350,10 @@ const ProductsPage = () => {
     return (
         <div className="bg-gray-100 min-h-screen">
             <Toaster position="top-right" />
-            <div className="flex flex-col lg:flex-row">
+            <div className="flex lg:flex-row">
                 {/* Sidebar section */}
                 <div>
-                    <Sidebar 
+                    <Sidebar
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                         selectedCategories={selectedCategories}
@@ -311,20 +375,24 @@ const ProductsPage = () => {
                     {/* 1) Horizontal card extending to the full width of the screen */}
                     {heroBanner}
 
+                    {/* NEW: Sort Dropdown for the product sections */}
+                    <div className="mb-4 flex justify-end">
+                        <SortDropdown sort={sort} onSortChange={setSort} />
+                    </div>
+
                     {/* 2) Flash Sales Section */}
                     <ProductSection
                         title="Flash Sales"
                         products={flashSales}
                         showCountdown={true}
-                        searchTerm={searchTerm}
                         onAddToCart={handleAddToCart}
+                        targetDate={flashSaleTargetDate}
                     />
-                    
+
                     {/* 3) Top Selling Items Section */}
                     <ProductSection
                         title="Top Selling Items"
                         products={topSelling}
-                        searchTerm={searchTerm}
                         onAddToCart={handleAddToCart}
                     />
 
@@ -332,15 +400,13 @@ const ProductsPage = () => {
                     <ProductSection
                         title="Discounted Deals"
                         products={discountedDeals}
-                        searchTerm={searchTerm}
                         onAddToCart={handleAddToCart}
                     />
-                    
+
                     {/* 5) Top Picks For you Section */}
                     <ProductSection
                         title="Top Picks For You"
                         products={topPicks}
-                        searchTerm={searchTerm}
                         onAddToCart={handleAddToCart}
                     />
 
@@ -351,7 +417,6 @@ const ProductsPage = () => {
                             name: cat,
                             image: `/images/category${uniqueCategories.indexOf(cat) + 1}.png`
                         }))}
-                        searchTerm={searchTerm}
                     />
 
                     {/* Dynamically create sections for other categories */}
@@ -359,8 +424,7 @@ const ProductsPage = () => {
                         <CategoryProductsSection
                             key={category}
                             categoryName={category}
-                            products={products}
-                            searchTerm={searchTerm}
+                            products={filteredAndSortedProducts}
                             onAddToCart={handleAddToCart}
                         />
                     ))}

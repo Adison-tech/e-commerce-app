@@ -15,7 +15,7 @@ const Sidebar = ({
     categoryCounts
 }) => {
     return (
-        <div className="hidden sm:block md:block bg-white w-48 px-4 py-3 rounded-x shadow-lg min-h-screen max-h-screen sticky md:top-16">
+        <div className="hidden sm:bloc md:block bg-white w-48 px-4 py-3 rounded-x shadow-lg min-h-screen max-h-screen sticky md:top-16">
             <h4 className="text-xl font-bold text-gray-900 mb-2">Filters</h4>
             {areFiltersActive && (
                <button onClick={clearFilters} className="text-sm text-blue-600 hover:text-blue-800 mb-4 font-medium">

@@ -9,8 +9,9 @@ import ProductDetailsPage from './pages/ProductDetailsPage';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
-import CartPage from './pages/CartPage'; // New
-import WishlistPage from './pages/WishlistPage'; // New
+import CartPage from './pages/CartPage';
+import WishlistPage from './pages/WishlistPage';
+import CategoryPage from './pages/CategoryPage';
 
 
 function App() {
@@ -61,6 +62,7 @@ function App() {
                     <Route path="/products/:id" element={<ProductDetailsPage />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
+                    <Route path="/category/:categoryName" element={<CategoryPage />} />
                 </Routes>
             </main>
         </>
